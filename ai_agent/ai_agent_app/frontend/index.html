@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Agent Chat</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Times New Roman", serif;
+      background: #000;
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    h1 {
+      text-align: left;
+      font-size: 2.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 1rem;
+    }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 0.5rem;
+      font-size: 1.25rem;
+    }
+
+    .message {
+      margin-bottom: 1rem;
+      white-space: pre-wrap;
+      max-width: 80%;
+    }
+
+    .message.user {
+      align-self: flex-start;
+    }
+
+    .message.ai {
+      align-self: flex-end;
+      text-align: right;
+    }
+
+    .input-container {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    #messageInput {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      border: 1px solid #555;
+      border-radius: 2rem;
+      background: #111;
+      color: white;
+      font-size: 1.2rem;
+      resize: none;
+      font-family: "Times New Roman", serif;
+      min-height: 44px;
+      max-height: 100px;
+      width: 70%;
+    }
+
+    #messageInput::placeholder {
+      color: #888;
+    }
+
+    #sendButton {
+      padding: 0.6rem 1.2rem;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 2rem;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    #sendButton:hover {
+      background: #555;
+    }
+
+    #sendButton:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .messages::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .messages::-webkit-scrollbar-thumb {
+      background: #444;
+    }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 2rem; }
+      #messageInput { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>AI Agent</h1>
+    <div class="chat-container">
+      <div class="messages" id="messages"></div>
+    </div>
+    <div class="input-container">
+      <textarea id="messageInput" placeholder="Ask me anything..." rows="1"></textarea>
+      <button id="sendButton" onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    let isLoading = false;
+
+    const messageInput = document.getElementById("messageInput");
+    messageInput.addEventListener('input', function () {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+    });
+
+    messageInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    function addMessage(content, sender) {
+      const messages = document.getElementById("messages");
+      const messageDiv = document.createElement("div");
+      messageDiv.className = `message ${sender}`;
+
+      if (sender === "user") {
+        messageDiv.textContent = `You:\n${content}`;
+      } else if (sender === "ai") {
+        messageDiv.textContent = `AI:\n${content}`;
+      } else {
+        messageDiv.textContent = content;
+      }
+
+      messages.appendChild(messageDiv);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById("messageInput");
+      const sendButton = document.getElementById("sendButton");
+      const message = input.value.trim();
+
+      if (!message || isLoading) return;
+
+      addMessage(message, "user");
+
+      input.value = "";
+      input.style.height = 'auto';
+      sendButton.disabled = true;
+      isLoading = true;
+
+      try {
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        });
+
+        const data = await res.json();
+        addMessage(data.response, "ai");
+      } catch (error) {
+        addMessage("Sorry, I encountered an error. Please try again.", "ai");
+        console.error("Error:", error);
+      } finally {
+        sendButton.disabled = false;
+        isLoading = false;
+        input.focus();
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      document.getElementById("messageInput").focus();
+    });
+  </script>
+</body>
+</html>
+
